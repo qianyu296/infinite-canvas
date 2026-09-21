@@ -11,6 +11,4 @@ interface ImportMetaEnv {
     readonly VITE_ANALYTICS_GA4_ID?: string;
     // Baidu Analytics site ID
     readonly VITE_ANALYTICS_BAIDU_ID?: string;
-    // Optional same-origin or public forwarding proxy base URL
-    readonly VITE_CANVAS_PROXY_URL?: string;
 }

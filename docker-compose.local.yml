@@ -1,10 +1,4 @@
 services:
-  proxy:
-    build:
-      context: ./canvas-proxy
-    container_name: infinite-canvas-proxy-local
-    restart: unless-stopped
-
   app:
     image: infinite-canvas:local
     build:
@@ -12,8 +6,7 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    depends_on:
-      - proxy
     restart: unless-stopped
     environment:
-      CANVAS_PROXY_URL: /proxy
+      # ANALYTICS_GA4_ID: G-XXXXXXXXXX                    # Google Analytics 4 衡量 ID
+      # ANALYTICS_BAIDU_ID: xxxxxxxxxxxxxxxxxxxxxxxxxxxx   # 百度统计站点 ID

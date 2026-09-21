@@ -37,18 +37,6 @@ cd docs
 docker compose -f docker-compose.local.yml up -d --build
 ```
 
-## Production CORS proxy
-
-The main image is a static frontend, so browser requests to an AI or WebDAV URL require that service to allow your site's origin. The repository includes `canvas-proxy`; the Compose setup routes same-origin `/proxy/` requests to it and enables it with `CANVAS_PROXY_URL=/proxy`:
-
-```bash
-docker compose up -d --build
-```
-
-The proxy forwards `/proxy/https://target.example/...` to the target. Keep it behind your own HTTPS site and do not expose it as a public standalone service. API keys remain in the browser and are forwarded with each request.
-
-The main application container only serves the static frontend. Canvases, My Assets, generation history, and API keys are stored in the browser by default; the proxy does not persist application data.
-
 ## Optional analytics
 
 No analytics are enabled by default. A deployment can enable GA4, Baidu Analytics, or both at runtime:
