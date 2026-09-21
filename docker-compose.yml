@@ -6,5 +6,5 @@ services:
       - "3000:3000"
     restart: unless-stopped
     environment:
-      # ANALYTICS_GA4_ID: G-XXXXXXXXXX                    # Google Analytics 4 衡量 ID
-      # ANALYTICS_BAIDU_ID: xxxxxxxxxxxxxxxxxxxxxxxxxxxx   # 百度统计站点 ID
+      ANALYTICS_GA4_ID: ""
+      ANALYTICS_BAIDU_ID: ""
