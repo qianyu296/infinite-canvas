@@ -1,19 +1,30 @@
-import { Bot, Menu } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Bot, Menu, LogOut, User } from "lucide-react";
 import { Button, Tooltip } from "antd";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 import { navigationTools, type NavigationToolSlug } from "@/constant/navigation-tools";
 import { AppConfigModal } from "@/components/layout/app-config-modal";
 import { MobileNavDrawer } from "@/components/layout/mobile-nav-drawer";
-import { UserStatusActions } from "@/components/layout/user-status-actions";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { GitHubLink } from "@/components/layout/github-link";
+import { VersionReleaseModal } from "@/components/layout/version-release-modal";
+import { DOCS_URL } from "@/constant/env";
+import { changeAppLocale, type AppLocale } from "@/i18n";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef, useState } from "react";
+import { canvasThemes } from "@/lib/canvas-theme";
+import { useConfigStore } from "@/stores/use-config-store";
+import { useThemeStore } from "@/stores/use-theme-store";
 import { useAgentStore } from "@/stores/use-agent-store";
+import { useAuthStore } from "@/stores/use-auth-store";
+import { apiClient } from "@/services/api/request";
+import { useEffect, useRef, useState } from "react";
 
 export function AppTopNav() {
     const { t } = useTranslation();
     const { pathname } = useLocation();
+    const navigate = useNavigate();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const autoConnectRef = useRef(false);
     const agentToken = useAgentStore((state) => state.token);
@@ -32,6 +43,16 @@ export function AppTopNav() {
         connectAgent({ silent: true });
     }, [agentConnected, agentEnabled, agentToken, connectAgent]);
 
+    const { isAuthenticated, logout } = useAuthStore();
+
+    const handleLogout = async () => {
+        try {
+            await apiClient.post("/api/auth/logout");
+        } catch {}
+        logout();
+        navigate("/login");
+    };
+
     return (
         <>
             {!hideHeader ? (
@@ -39,41 +60,18 @@ export function AppTopNav() {
                     <div className="mx-auto flex h-full max-w-7xl items-stretch justify-between gap-5 px-6">
                         <div className="flex min-w-0 items-center">
                             <Link to="/" className="flex h-full shrink-0 items-center gap-2 text-sm font-semibold leading-none tracking-tight text-stone-950 transition hover:text-stone-600 dark:text-stone-100 dark:hover:text-stone-300">
-                                <span
-                                    className="size-5 shrink-0 bg-current"
-                                    style={{
-                                        mask: "url(/logo.svg) center / contain no-repeat",
-                                        WebkitMask: "url(/logo.svg) center / contain no-repeat",
-                                    }}
-                                />
+                                <span className="size-5 shrink-0 bg-current" style={{ mask: "url(/logo.svg) center / contain no-repeat", WebkitMask: "url(/logo.svg) center / contain no-repeat" }} />
                                 <span className="text-base font-medium">{t("meta.title")}</span>
                             </Link>
-
-                            <button
-                                type="button"
-                                className="ml-3 inline-flex size-8 shrink-0 items-center justify-center text-stone-600 transition hover:text-stone-950 md:hidden dark:text-stone-300 dark:hover:text-white"
-                                onClick={() => setMobileNavOpen(true)}
-                                aria-label={t("topNav.openMenu")}
-                                title={t("topNav.menu")}
-                            >
+                            <button type="button" className="ml-3 inline-flex size-8 shrink-0 items-center justify-center text-stone-600 transition hover:text-stone-950 md:hidden dark:text-stone-300 dark:hover:text-white" onClick={() => setMobileNavOpen(true)} aria-label={t("topNav.openMenu")} title={t("topNav.menu")}>
                                 <Menu className="size-5" />
                             </button>
-
                             <nav className="hide-scrollbar ml-8 hidden h-14 min-w-0 items-center gap-7 overflow-x-auto md:flex">
                                 {navigationTools.map((tool) => {
                                     const Icon = tool.icon;
                                     const active = tool.slug === activeToolSlug;
                                     return (
-                                        <Link
-                                            key={tool.slug}
-                                            to={`/${tool.slug}`}
-                                            className={cn(
-                                                "relative flex h-14 shrink-0 items-center gap-2 text-sm leading-6 transition after:absolute after:inset-x-0 after:bottom-0 after:h-px",
-                                                active
-                                                    ? "font-medium text-stone-950 after:bg-stone-950 dark:text-stone-100 dark:after:bg-stone-100"
-                                                    : "text-stone-500 after:bg-transparent hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100",
-                                            )}
-                                        >
+                                        <Link key={tool.slug} to={`/${tool.slug}`} className={cn("relative flex h-14 shrink-0 items-center gap-2 text-sm leading-6 transition after:absolute after:inset-x-0 after:bottom-0 after:h-px", active ? "font-medium text-stone-950 after:bg-stone-950 dark:text-stone-100 dark:after:bg-stone-100" : "text-stone-500 after:bg-transparent hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100")}>
                                             <Icon className="size-4" />
                                             <span className="truncate">{t(`navigation.${tool.slug}`)}</span>
                                         </Link>
@@ -81,19 +79,82 @@ export function AppTopNav() {
                                 })}
                             </nav>
                         </div>
-
                         <div className="my-auto flex h-9 min-w-0 items-center justify-end gap-2 justify-self-end whitespace-nowrap">
                             <Tooltip title={t(panelOpen ? "topNav.closeAgent" : "topNav.openAgent")}>
                                 <Button type="text" shape="circle" className="!h-8 !w-8 !min-w-8" icon={<Bot className="size-4" />} onClick={togglePanel} aria-label={t(panelOpen ? "topNav.closeAgent" : "topNav.openAgent")} />
                             </Tooltip>
+                            {isAuthenticated ? (
+                                <Tooltip title={t("topNav.logout")}>
+                                    <button type="button" className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-black/5 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white [&_svg]:size-4" onClick={handleLogout} aria-label={t("topNav.logout")} title={t("topNav.logout")}>
+                                        <LogOut className="size-4" />
+                                    </button>
+                                </Tooltip>
+                            ) : (
+                                <Tooltip title={t("topNav.login")}>
+                                    <Button type="text" shape="circle" className="!h-8 !w-8 !min-w-8" icon={<User className="size-4" />} onClick={() => navigate("/login")} aria-label={t("topNav.login")} title={t("topNav.login")} />
+                                </Tooltip>
+                            )}
                             <UserStatusActions />
                         </div>
                     </div>
                 </header>
             ) : null}
-
             <MobileNavDrawer open={mobileNavOpen} activeToolSlug={activeToolSlug} onClose={() => setMobileNavOpen(false)} />
             <AppConfigModal />
         </>
+    );
+}
+
+type UserStatusActionsProps = {
+    showConfig?: boolean;
+    variant?: "default" | "canvas";
+    onOpenShortcuts?: () => void;
+    onOpenPlugins?: () => void;
+};
+
+function UserStatusActions({ showConfig = true, variant = "default", onOpenShortcuts, onOpenPlugins }: UserStatusActionsProps) {
+    const { i18n, t } = useTranslation();
+    const theme = useThemeStore((state) => state.theme);
+    const setTheme = useThemeStore((state) => state.setTheme);
+    const openConfigDialog = useConfigStore((state) => state.openConfigDialog);
+    const canvasTheme = canvasThemes[theme];
+    const naturalIconClass = "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-black/5 hover:text-stone-950 dark:text-stone-300 dark:hover:bg-white/10 dark:hover:text-white [&_svg]:size-4";
+    const iconStyle: CSSProperties | undefined = variant === "canvas" ? { color: canvasTheme.node.text } : undefined;
+    const versionStyle = iconStyle;
+    const gitHubClassName = "size-7 text-base";
+    const gitHubStyle = iconStyle;
+    const locale = i18n.resolvedLanguage as AppLocale;
+    const nextLocale = locale === "zh-CN" ? "en-US" : "zh-CN";
+    const languageLabel = t("topNav.switchLanguage", { language: t(nextLocale === "zh-CN" ? "locale.zhCN" : "locale.enUS") });
+
+    return (
+        <div className="inline-flex shrink-0 items-center gap-1">
+            {onOpenPlugins ? (
+                <button type="button" className={naturalIconClass} style={iconStyle} onClick={onOpenPlugins} aria-label={t("topNav.plugins")} title={t("topNav.plugins")}>
+                    <Puzzle className="size-4" />
+                </button>
+            ) : null}
+            <a href={DOCS_URL} target="_blank" rel="noopener noreferrer" className={naturalIconClass} style={iconStyle} aria-label={t("topNav.docs")} title={t("topNav.docs")}>
+                <BookOpen className="size-4" />
+            </a>
+            {showConfig ? (
+                <button type="button" className={naturalIconClass} style={iconStyle} onClick={() => openConfigDialog(false)} aria-label={t("navigation.config")} title={t("navigation.config")}>
+                    <Settings2 className="size-4" />
+                </button>
+            ) : null}
+            <Tooltip title={languageLabel} mouseEnterDelay={0.2}>
+                <button type="button" className={`${naturalIconClass} text-[11px] font-semibold tracking-tight`} style={iconStyle} onClick={() => void changeAppLocale(nextLocale)} aria-label={languageLabel}>
+                    {locale === "zh-CN" ? "中" : "EN"}
+                </button>
+            </Tooltip>
+            <AnimatedThemeToggler theme={theme} onThemeChange={setTheme} className={naturalIconClass} style={iconStyle} aria-label={t(theme === "dark" ? "topNav.lightTheme" : "topNav.darkTheme")} title={t(theme === "dark" ? "topNav.lightTheme" : "topNav.darkTheme")} />
+            <VersionReleaseModal style={versionStyle} />
+            <GitHubLink className={cn("bg-transparent hover:bg-transparent dark:hover:bg-transparent", gitHubClassName)} style={gitHubStyle} />
+            {onOpenShortcuts ? (
+                <button type="button" className={naturalIconClass} style={iconStyle} onClick={onOpenShortcuts} aria-label={t("topNav.shortcuts")} title={t("topNav.shortcuts")}>
+                    <Keyboard className="size-4" />
+                </button>
+            ) : null}
+        </div>
     );
 }

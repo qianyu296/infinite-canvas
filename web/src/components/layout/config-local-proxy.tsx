@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import { useCopyText } from "@/hooks/use-copy-text";
 import { testLocalProxy } from "@/services/api/local-proxy";
-import { DEFAULT_LOCAL_PROXY_URL, LOCAL_PROXY_PACKAGE, normalizeLocalProxyUrl, useConfigStore } from "@/stores/use-config-store";
+import { DEFAULT_API_BASE_URL, useConfigStore } from "@/stores/use-config-store";
 
 export function ConfigLocalProxy() {
     const { message } = App.useApp();
@@ -14,7 +14,6 @@ export function ConfigLocalProxy() {
     const [testing, setTesting] = useState(false);
     const config = useConfigStore((state) => state.config);
     const updateConfig = useConfigStore((state) => state.updateConfig);
-    const command = localProxyCommand(config.proxyUrl);
 
     const testProxy = async () => {
         setTesting(true);
@@ -45,17 +44,12 @@ export function ConfigLocalProxy() {
                         <div className="mt-3 rounded-md bg-stone-100 px-3 py-2 dark:bg-stone-900">
                             <div className="mb-1 text-xs text-stone-500">{t("config.proxy.startHint")}</div>
                             <div className="flex items-center justify-between gap-3">
-                                <code className="min-w-0 truncate text-xs">{command}</code>
-                                <Button size="small" type="text" icon={<Copy className="size-3.5" />} onClick={() => copyText(command)} />
+                                <code className="min-w-0 truncate text-xs">{config.proxyUrl}</code>
+                                <Button size="small" type="text" icon={<Copy className="size-3.5" />} onClick={() => copyText(config.proxyUrl)} />
                             </div>
                         </div>
                         <Form.Item label={t("config.proxy.address")} extra={t("config.proxy.addressDescription")} className="mt-3 mb-0">
-                            <Input
-                                value={config.proxyUrl}
-                                placeholder={DEFAULT_LOCAL_PROXY_URL}
-                                onChange={(event) => updateConfig("proxyUrl", event.target.value)}
-                                onBlur={(event) => updateConfig("proxyUrl", normalizeLocalProxyUrl(event.target.value) || DEFAULT_LOCAL_PROXY_URL)}
-                            />
+                            <Input value={config.proxyUrl} placeholder={DEFAULT_API_BASE_URL} onChange={(event) => updateConfig("proxyUrl", event.target.value)} onBlur={(event) => updateConfig("proxyUrl", event.target.value || DEFAULT_API_BASE_URL)} />
                         </Form.Item>
                         <Button className="mt-3" icon={<Wifi className="size-4" />} loading={testing} onClick={() => void testProxy()}>
                             {t("config.proxy.test")}
@@ -66,15 +60,4 @@ export function ConfigLocalProxy() {
             </section>
         </Form>
     );
-}
-
-function localProxyCommand(proxyUrl: string) {
-    // Pinned to @latest because npx otherwise reuses whatever version it already cached.
-    const command = `npx ${LOCAL_PROXY_PACKAGE}@latest`;
-    try {
-        const port = new URL(normalizeLocalProxyUrl(proxyUrl) || DEFAULT_LOCAL_PROXY_URL).port;
-        return port && port !== new URL(DEFAULT_LOCAL_PROXY_URL).port ? `${command} --port ${port}` : command;
-    } catch {
-        return command;
-    }
 }

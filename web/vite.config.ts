@@ -10,16 +10,11 @@ const webDir = dirname(fileURLToPath(import.meta.url));
 const localVersion = readFileSync(resolve(webDir, "../VERSION"), "utf8").trim() || "dev";
 const localChangelog = readFileSync(resolve(webDir, "../CHANGELOG.md"), "utf8");
 
-// Expose /plugins/index.json with local plugin files from public/plugins.
-// The frontend can discover and list them when enabled; development reads the directory live, while builds emit a static registry.
 function localPluginsManifest(): Plugin {
     const pluginsDir = resolve(webDir, "public/plugins");
     const listLocalPlugins = () => {
         try {
-            return readdirSync(pluginsDir)
-                .filter((file) => file.endsWith(".js"))
-                .sort()
-                .map((file) => `/plugins/${file}`);
+            return readdirSync(pluginsDir).filter((file) => file.endsWith(".js")).sort().map((file) => `/plugins/${file}`);
         } catch {
             return [];
         }
@@ -42,12 +37,12 @@ export default defineConfig({
     base: process.env.VITE_BASE || "/",
     plugins: [react(), localPluginsManifest()],
     resolve: {
-        alias: {
-            "@": resolve(webDir, "src"),
-        },
+        alias: { "@": resolve(webDir, "src") },
     },
-    define: {
-        __APP_VERSION__: JSON.stringify(localVersion),
-        __APP_RELEASES__: JSON.stringify(parseChangelog(localChangelog)),
+    define: { __APP_VERSION__: JSON.stringify(localVersion), __APP_RELEASES__: JSON.stringify(parseChangelog(localChangelog)) },
+    server: {
+        proxy: {
+            "/api": { target: "http://localhost:3001", changeOrigin: true, rewrite: (path) => path.replace(/^\/api/, "/api") },
+        },
     },
 });
