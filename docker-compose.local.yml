@@ -1,4 +1,10 @@
 services:
+  proxy:
+    build:
+      context: ./canvas-proxy
+    container_name: infinite-canvas-proxy-local
+    restart: unless-stopped
+
   app:
     image: infinite-canvas:local
     build:
@@ -6,4 +12,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    depends_on:
+      - proxy
     restart: unless-stopped
+    environment:
+      CANVAS_PROXY_URL: /proxy

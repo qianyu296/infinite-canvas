@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { nanoid } from "nanoid";
 
 import i18n from "@/i18n";
+import { CANVAS_PROXY_URL } from "@/constant/runtime-config";
 
 export type ApiCallFormat = "openai" | "gemini";
 export type ModelCapability = "image" | "video" | "text" | "audio";
@@ -119,8 +120,8 @@ export const defaultConfig: AiConfig = {
     background: "",
     count: "1",
     canvasImageCount: "3",
-    proxyEnabled: false,
-    proxyUrl: DEFAULT_LOCAL_PROXY_URL,
+    proxyEnabled: Boolean(CANVAS_PROXY_URL),
+    proxyUrl: CANVAS_PROXY_URL || DEFAULT_LOCAL_PROXY_URL,
 };
 
 export const defaultWebdavSyncConfig: WebdavSyncConfig = {
@@ -271,8 +272,8 @@ export const useConfigStore = create<ConfigStore>()(
                         videoWatermark: config.videoWatermark || "false",
                         videoMode: config.videoMode === "reference" ? "reference" : "frames",
                         canvasImageCount: config.canvasImageCount || "3",
-                        proxyEnabled: Boolean(config.proxyEnabled),
-                        proxyUrl: config.proxyUrl || DEFAULT_LOCAL_PROXY_URL,
+                        proxyEnabled: CANVAS_PROXY_URL ? Boolean(config.proxyEnabled ?? true) : Boolean(config.proxyEnabled),
+                        proxyUrl: config.proxyUrl || CANVAS_PROXY_URL || DEFAULT_LOCAL_PROXY_URL,
                     },
                 };
             },
@@ -483,6 +484,7 @@ export function buildApiUrl(baseUrl: string, path: string) {
 export function normalizeLocalProxyUrl(value: string) {
     const trimmed = value.trim().replace(/\/+$/, "");
     if (!trimmed) return "";
+    if (trimmed.startsWith("/")) return trimmed;
     return /^https?:\/\//i.test(trimmed) ? trimmed : `http://${trimmed}`;
 }
 

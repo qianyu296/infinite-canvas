@@ -14,9 +14,18 @@ sanitize_id() {
 GA4_ID=$(sanitize_id "${ANALYTICS_GA4_ID:-}")
 BAIDU_ID=$(sanitize_id "${ANALYTICS_BAIDU_ID:-}")
 
+# Keep the proxy URL as data when writing JavaScript. The deployment may use a
+# same-origin path such as /proxy or a separate HTTPS proxy service.
+escape_js_string() {
+    printf '%s' "$1" | tr -d '\r\n' | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
+
+CANVAS_PROXY_URL_VALUE=$(escape_js_string "${CANVAS_PROXY_URL:-}")
+
 cat > /usr/share/nginx/html/config.js <<EOF
 window.__RUNTIME_CONFIG__ = {
   ANALYTICS_GA4_ID: "${GA4_ID}",
-  ANALYTICS_BAIDU_ID: "${BAIDU_ID}"
+  ANALYTICS_BAIDU_ID: "${BAIDU_ID}",
+  CANVAS_PROXY_URL: "${CANVAS_PROXY_URL_VALUE}"
 };
 EOF
